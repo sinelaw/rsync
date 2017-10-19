@@ -26,6 +26,7 @@
 
 extern int dry_run;
 extern int do_xfers;
+extern OFF_T max_size_for_data_xfer;
 extern int stdout_format_has_i;
 extern int logfile_format_has_i;
 extern int am_root;
@@ -1903,7 +1904,10 @@ static void recv_generator(char *fname, struct file_struct *file, int ndx,
 
 	if (statret != 0 || whole_file)
 		write_sum_head(f_out, NULL);
-	else if (sx.st.st_size <= 0) {
+	else if ((sx.st.st_size <= 0)
+                 || ((max_size_for_data_xfer >= 0) && (F_LENGTH(file) >= max_size_for_data_xfer))) {
+                rprintf(FINFO, "skipping generate_and_send_sums, file %s of size %s\n",
+                        fnamecmp, big_num(F_LENGTH(file)));
 		write_sum_head(f_out, NULL);
 		close(fd);
 	} else {

@@ -22,6 +22,7 @@
 #include "rsync.h"
 #include "inums.h"
 
+extern OFF_T max_size_for_data_xfer;
 extern int do_xfers;
 extern int am_server;
 extern int am_daemon;
@@ -390,7 +391,9 @@ void send_files(int f_in, int f_out)
 
 		set_compression(fname);
 
-		match_sums(f_xfer, s, mbuf, st.st_size);
+		const int skip_data = ((max_size_for_data_xfer < 0) || (st.st_size > max_size_for_data_xfer));
+		if (!skip_data) match_sums(f_xfer, s, mbuf, st.st_size);
+
 		if (INFO_GTE(PROGRESS, 1))
 			end_progress(st.st_size);
 

@@ -22,6 +22,7 @@
 #include "rsync.h"
 #include "inums.h"
 
+extern OFF_T max_size_for_data_xfer;
 extern int dry_run;
 extern int do_xfers;
 extern int am_root;
@@ -299,7 +300,9 @@ static int receive_data(int f_in, char *fname_r, int fd_r, OFF_T size_r,
 		}
 	}
 
-	while ((i = recv_token(f_in, &data)) != 0) {
+	const int skip_data = ((max_size_for_data_xfer < 0) || (total_size > max_size_for_data_xfer));
+
+	while (!skip_data && ((i = recv_token(f_in, &data)) != 0)) {
 		if (INFO_GTE(PROGRESS, 1))
 			show_progress(offset, total_size);
 
@@ -369,6 +372,7 @@ static int receive_data(int f_in, char *fname_r, int fd_r, OFF_T size_r,
 	if (flush_write_file(fd) < 0)
 		goto report_write_error;
 
+	if (!skip_data) {
 #ifdef HAVE_FTRUNCATE
 	/* inplace: New data could be shorter than old data.
 	 * preallocate_files: total_size could have been an overestimate.
@@ -382,6 +386,7 @@ static int receive_data(int f_in, char *fname_r, int fd_r, OFF_T size_r,
 			full_fname(fname));
 	}
 #endif
+	}
 
 	if (INFO_GTE(PROGRESS, 1))
 		end_progress(total_size);
@@ -398,6 +403,8 @@ static int receive_data(int f_in, char *fname_r, int fd_r, OFF_T size_r,
 
 	if (mapbuf)
 		unmap_file(mapbuf);
+
+        if (skip_data) return 1;
 
 	read_buf(f_in, sender_file_sum, checksum_len);
 	if (DEBUG_GTE(DELTASUM, 2))

@@ -399,6 +399,9 @@ to the detailed description below for a complete description.  verb(
      --ignore-errors         delete even if there are I/O errors
      --force                 force deletion of dirs even if not empty
      --max-delete=NUM        don't delete more than NUM files
+     --max-size-for-data-xfer=SIZE
+                             if a file is larger than SIZE, transfer only its
+                             attributes (skip the data)
      --max-size=SIZE         don't transfer any file larger than SIZE
      --min-size=SIZE         don't transfer any file smaller than SIZE
      --partial               keep partially transferred files
@@ -1472,6 +1475,11 @@ Older clients interpreted this as "unlimited", so if you don't know what
 version the client is, you can use the less obvious bf(--max-delete=-1) as
 a backward-compatible way to specify that no deletions be allowed (though
 really old versions didn't warn when the limit was exceeded).
+
+dit(bf(--max-size-for-data-xfer=SIZE)) This tells rsync to skip the data
+of files that are larger than the specified SIZE. Note that only the
+data synchornization is skipped; everything else (attributes, deletion, etc.)
+is synchronized as usual.
 
 dit(bf(--max-size=SIZE)) This tells rsync to avoid transferring any
 file that is larger than the specified SIZE. The SIZE value can be

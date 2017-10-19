@@ -116,6 +116,7 @@ int ignore_existing = 0;
 int ignore_non_existing = 0;
 int need_messages_from_generator = 0;
 int max_delete = INT_MIN;
+OFF_T max_size_for_data_xfer = -1;
 OFF_T max_size = -1;
 OFF_T min_size = -1;
 int ignore_errors = 0;
@@ -307,7 +308,7 @@ static BOOL usermap_via_chown, groupmap_via_chown;
 #ifdef HAVE_SETVBUF
 static char *outbuf_mode;
 #endif
-static char *bwlimit_arg, *max_size_arg, *min_size_arg;
+static char *bwlimit_arg, *max_size_arg, *min_size_arg, *max_size_for_data_xfer_arg;;
 static char tmp_partialdir[] = ".~tmp~";
 
 /** Local address to bind.  As a character string because it's
@@ -740,6 +741,9 @@ void usage(enum logcode F)
   rprintf(F,"     --ignore-errors         delete even if there are I/O errors\n");
   rprintf(F,"     --force                 force deletion of directories even if not empty\n");
   rprintf(F,"     --max-delete=NUM        don't delete more than NUM files\n");
+  rprintf(F,"     --max-size-for-data-xfer=SIZE\n");
+  rprintf(F,"                             if a file is larger than SIZE, transfer only its\n");
+  rprintf(F,"                             attributes (skip the data)\n");
   rprintf(F,"     --max-size=SIZE         don't transfer any file larger than SIZE\n");
   rprintf(F,"     --min-size=SIZE         don't transfer any file smaller than SIZE\n");
   rprintf(F,"     --partial               keep partially transferred files\n");
@@ -816,7 +820,7 @@ void usage(enum logcode F)
 enum {OPT_VERSION = 1000, OPT_DAEMON, OPT_SENDER, OPT_EXCLUDE, OPT_EXCLUDE_FROM,
       OPT_FILTER, OPT_COMPARE_DEST, OPT_COPY_DEST, OPT_LINK_DEST, OPT_HELP,
       OPT_INCLUDE, OPT_INCLUDE_FROM, OPT_MODIFY_WINDOW, OPT_MIN_SIZE, OPT_CHMOD,
-      OPT_READ_BATCH, OPT_WRITE_BATCH, OPT_ONLY_WRITE_BATCH, OPT_MAX_SIZE,
+      OPT_READ_BATCH, OPT_WRITE_BATCH, OPT_ONLY_WRITE_BATCH, OPT_MAX_SIZE, OPT_MAX_SIZE_FOR_DATA_XFER,
       OPT_NO_D, OPT_APPEND, OPT_NO_ICONV, OPT_INFO, OPT_DEBUG,
       OPT_USERMAP, OPT_GROUPMAP, OPT_CHOWN, OPT_BWLIMIT,
       OPT_SERVER, OPT_REFUSED_BASE = 9000};
@@ -917,6 +921,7 @@ static struct poptOption long_options[] = {
   {"existing",         0,  POPT_ARG_NONE,   &ignore_non_existing, 0, 0, 0 },
   {"ignore-non-existing",0,POPT_ARG_NONE,   &ignore_non_existing, 0, 0, 0 },
   {"ignore-existing",  0,  POPT_ARG_NONE,   &ignore_existing, 0, 0, 0 },
+  {"max-size-for-data-xfer", 0,  POPT_ARG_STRING, &max_size_for_data_xfer_arg, OPT_MAX_SIZE_FOR_DATA_XFER, 0, 0 },
   {"max-size",         0,  POPT_ARG_STRING, &max_size_arg, OPT_MAX_SIZE, 0, 0 },
   {"min-size",         0,  POPT_ARG_STRING, &min_size_arg, OPT_MIN_SIZE, 0, 0 },
   {"sparse",          'S', POPT_ARG_VAL,    &sparse_files, 1, 0, 0 },
@@ -1784,6 +1789,16 @@ int parse_arguments(int *argc_p, const char ***argv_p)
 				 am_server ? "server" : "client");
 			return 0;
 #endif
+
+		case OPT_MAX_SIZE_FOR_DATA_XFER:
+			if ((max_size_for_data_xfer = parse_size_arg(&max_size_for_data_xfer_arg, 'b')) < 0) {
+				snprintf(err_buf, sizeof err_buf,
+					"--max-size-for-data-xfer value is invalid: %s\n",
+					max_size_for_data_xfer_arg);
+				return 0;
+			}
+			break;
+
 
 		default:
 			/* A large opt value means that set_refuse_options()
